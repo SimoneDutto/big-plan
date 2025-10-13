@@ -1,10 +1,9 @@
 data "juju_model" "model" {
-  name = var.model
+  uuid = var.model
 }
 
 
 resource "juju_application" "postgresql" {
-  model = data.juju_model.model.name
   name  = var.name
   trust = var.trust
   units = var.units
@@ -20,12 +19,13 @@ resource "juju_application" "postgresql" {
     plugin_uuid_ossp_enable = true
     plugin_btree_gin_enable = true
   }
+  model_uuid = data.juju_model.model.uuid
 }
 
 resource "juju_offer" "database" {
   depends_on = [juju_application.postgresql]
 
-  model            = data.juju_model.model.name
   application_name = juju_application.postgresql.name
   endpoints        = ["database"]
+  model_uuid       = data.juju_model.model.uuid
 }

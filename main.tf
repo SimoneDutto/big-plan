@@ -1,23 +1,23 @@
 terraform {
   required_providers {
     juju = {
-      source = "juju/juju"
-      # version = ">=1.0.0"
+      source  = "juju/juju"
+      version = ">=1.0.0"
     }
   }
 }
 
-variable "model_name_created_externally" {
+variable "model_uuid_created_externally" {
   description = "Set to true if the Juju model is created outside of this configuration."
   type        = string
-  default     = "model1"
+  default     = "66f89da3-2bd8-40f4-8258-393f176a219d"
 }
 
 provider "juju" {}
 
 # model is a data source created outside of terraform.
 module "postgres" {
-  model  = var.model_name_created_externally
+  model  = var.model_uuid_created_externally
   source = "./postgresql"
 }
 
@@ -27,7 +27,7 @@ resource "juju_model" "openfga_model" {
 
 # model is a data source, but the model is created inside the module.
 module "openfga" {
-  model              = juju_model.openfga_model.name
+  model              = juju_model.openfga_model.uuid
   source             = "./openfga"
   database_offer_url = module.postgres.database_offer
 }
@@ -47,8 +47,7 @@ resource "juju_model" "prod" {
 
 # application and integration top-level
 resource "juju_application" "temporal_k8s" {
-  name  = "temporal"
-  model = resource.juju_model.prod.name
+  name = "temporal"
 
   charm {
     name = "temporal-k8s"
@@ -57,11 +56,11 @@ resource "juju_application" "temporal_k8s" {
   config = {
     num-history-shards = 2
   }
+  model_uuid = resource.juju_model.prod.uuid
 }
 
 
 resource "juju_integration" "temporal_db" {
-  model = resource.juju_model.prod.name
   application {
     offer_url = module.postgres.database_offer
   }
@@ -70,10 +69,10 @@ resource "juju_integration" "temporal_db" {
     name     = juju_application.temporal_k8s.name
     endpoint = "db"
   }
+  model_uuid = resource.juju_model.prod.uuid
 }
 
 resource "juju_integration" "temporal_visibility_db" {
-  model = resource.juju_model.prod.name
   application {
     offer_url = module.postgres.database_offer
   }
@@ -82,19 +81,19 @@ resource "juju_integration" "temporal_visibility_db" {
     name     = juju_application.temporal_k8s.name
     endpoint = "visibility"
   }
+  model_uuid = resource.juju_model.prod.uuid
 }
 
 resource "juju_application" "temporal_admin_k8s" {
-  name  = "temporal-admin"
-  model = juju_model.prod.name
+  name = "temporal-admin"
 
   charm {
     name = "temporal-admin-k8s"
   }
+  model_uuid = juju_model.prod.uuid
 }
 
 resource "juju_integration" "temporal_admin" {
-  model = juju_model.prod.name
 
   application {
     name     = juju_application.temporal_k8s.name
@@ -105,20 +104,20 @@ resource "juju_integration" "temporal_admin" {
     name     = juju_application.temporal_admin_k8s.name
     endpoint = "admin"
   }
+  model_uuid = juju_model.prod.uuid
 }
 
 
 resource "juju_application" "temporal_k8s_ui" {
-  name  = "temporalui"
-  model = resource.juju_model.prod.name
+  name = "temporalui"
 
   charm {
     name = "temporal-ui-k8s"
   }
+  model_uuid = resource.juju_model.prod.uuid
 }
 
 resource "juju_integration" "temporal_ui" {
-  model = juju_model.prod.name
 
   application {
     name     = juju_application.temporal_k8s.name
@@ -129,6 +128,7 @@ resource "juju_integration" "temporal_ui" {
     name     = juju_application.temporal_k8s_ui.name
     endpoint = "ui"
   }
+  model_uuid = juju_model.prod.uuid
 }
 
 
