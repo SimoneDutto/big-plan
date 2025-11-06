@@ -1,5 +1,4 @@
 resource "juju_application" "openfga" {
-  model = var.model
   name  = var.name
   trust = var.trust
   units = var.units
@@ -9,18 +8,18 @@ resource "juju_application" "openfga" {
     channel = var.charm.channel
     base    = var.charm.base
   }
+  model_uuid = var.model
 }
 
 resource "juju_offer" "openfga" {
   depends_on = [juju_application.openfga]
 
-  model            = var.model
   application_name = juju_application.openfga.name
   endpoints        = ["openfga"]
+  model_uuid       = var.model
 }
 
 resource "juju_integration" "db_integration" {
-  model = var.model
   application {
     offer_url = var.database_offer_url
   }
@@ -29,5 +28,6 @@ resource "juju_integration" "db_integration" {
     name     = juju_application.openfga.name
     endpoint = "database"
   }
+  model_uuid = var.model
 }
 
